@@ -71,7 +71,7 @@ Here we tested how well naive viewers could use the collected visual explanation
 #### Data
 - `/analysis/results/csv/` contains preprocessed and anonymized CSVs for all participants
 
-### Causal intervention experiment
+### Causal inference experiment
 Here we tested how well naive viewers could use the collected visual explanations and depictions to quickly and accurately infer which element to intervene on to produce an effect (i.e., which part of the machine to manipulate to activate the light bulb).
 In this experiment, participants placed their fingers on the "0" and "1" keys of their keyboard. They studied a photograph of a machine for 3 seconds and then were presented with a drawing of the machine for another 3 seconds. After this time, they were presented with a reference image and were asked to press the key that corresponded to the part of the machine that they would intervene on to activate the light bulb <i>based on their interpretation of the drawing</i>. 
 
@@ -88,3 +88,5 @@ In this experiment, participants placed their fingers on the "0" and "1" keys of
 
 #### Data
 - `/analysis/results/csv/` contains preprocessed and anonymized CSVs for all participants
+
+### Causal intervention experiment
