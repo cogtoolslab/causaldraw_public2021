@@ -1,4 +1,4 @@
-# How do semantic properties of visual explanations guide causal inferences?
+# How do the semantic properties of visual explanations guide causal inferences?
 
 How do we communicate our abstract knowledge to others? This project investigates the semantic differences between visual explanations and depictions.
 
