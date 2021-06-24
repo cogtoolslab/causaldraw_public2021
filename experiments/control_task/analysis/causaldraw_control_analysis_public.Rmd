@@ -1,0 +1,229 @@
+---
+title: "causaldraw_intervention"
+author: "Holly Huey"
+date: "11/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message = FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(tidyr)
+library(reshape2)
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(emmeans)
+library(ggeffects)
+library(ggsignif)
+library(stringr)
+require(tidyboot)
+```
+
+## Load in data
+```{r message = FALSE}
+## note that this data has already been preprocessed so as to remove all identifiable information (originally collected on SONA)
+final_data <- read_csv("../results/csv/causaldraw_manipulationcheck_processed_data.csv") 
+
+## remove empty cols
+final_data <- subset(final_data, select = -c(aID, batch, hitID, internal_node_id, prompt, response_ends_trial, stimulus_duration, trial_duration, wID, key_check))
+
+## note: there are no sketchIDs, because participants made responses to the video demos (not the sketches) in this control task
+```
+
+## How many responses per sketch
+```{r}
+detach(package:plyr)
+
+response_count <- final_data %>% 
+  group_by(file_id) %>% 
+  summarise(count = n_distinct(gameID))
+
+mean(response_count$count)
+
+freq_plot <- response_count %>% 
+  ggplot(aes(x=file_id, y=count, fill=file_id)) +
+  geom_bar(aes(y=count), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  theme_light() 
+
+freq_plot
+```
+
+## Split datasets
+```{r}
+practice <- final_data %>%
+  filter(phase %in% c("practice")) %>% 
+  droplevels()
+
+processed_data <- final_data %>%
+  filter(!(phase %in% c("practice"))) %>% 
+  droplevels()
+```
+
+## Analyses for corrAns
+```{r}
+m_corrAns <- glmer(corrAns ~ toy_id + (1|gameID), family="binomial", data=processed_data, nAGQ=0)
+summary(m_corrAns)
+```
+
+```{r}
+m_corrType <- glmer(corrType ~ toy_id + (1|gameID), family="binomial", data=processed_data, nAGQ=0)
+summary(m_corrType)
+
+m_toy_var <- glmer(corrAns ~ toy_variant + (1|gameID), family="binomial", data=processed_data, nAGQ=0)
+summary(m_toy_var)
+
+gears_1 <- processed_data %>% 
+  filter(toy_id %in% c("gears_1")) 
+gears_2 <- processed_data %>% 
+  filter(toy_id %in% c("gears_2")) 
+levers_1 <- processed_data %>% 
+  filter(toy_id %in% c("levers_1")) 
+levers_2 <- processed_data %>% 
+  filter(toy_id %in% c("levers_2")) 
+pulleys_1 <- processed_data %>% 
+  filter(toy_id %in% c("pulleys_1"))
+pulleys_2 <- processed_data %>% 
+  filter(toy_id %in% c("pulleys_2")) 
+
+t.test(gears_1$corrAns, mu = 0.25)
+t.test(gears_2$corrAns, mu = 0.25)
+t.test(levers_1$corrAns, mu = 0.25)
+t.test(levers_2$corrAns, mu = 0.25)
+t.test(pulleys_1$corrAns, mu = 0.25)
+t.test(pulleys_2$corrAns, mu = 0.25)
+```
+
+### raw plot for corrAns
+```{r}
+## making plot
+plot_corrAns <- processed_data %>% 
+  ggplot(aes(x=toy_id, y=corrAns, fill=toy_id)) +
+  geom_bar(aes(y=corrAns), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  xlab("toy_id") +
+  ylab("corrAns") +
+  ylim(0,1) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_corrAns 
+```
+
+### plot for predicted corrAns from model
+```{r}
+df_corrAns <- ggpredict(m_corrAns, terms = c("toy_id"))
+
+## making plot
+plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  xlab("condition") +
+  ylab("corrAns") +
+  ylim(0,1) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_corrAns 
+```
+
+### plot for predicted corrType from model
+```{r}
+df_corrAns <- ggpredict(m_corrType, terms = c("toy_id"))
+
+## making plot
+plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  xlab("condition") +
+  ylab("corrType") +
+  ylim(0,1) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_corrAns 
+```
+
+## plot for predicted toy_var from model
+```{r}
+df_toy_var <- ggpredict(m_toy_var, terms = c("toy_variant"))
+
+## making plot
+plot_toy_var <- ggplot(df_toy_var, aes(factor(x), predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  xlab("condition") +
+  ylab("corrAns") +
+  scale_x_discrete(labels=c("1", "2")) +
+  ylim(0,1) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 12), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_toy_var 
+```
+
+## Analyses for RT
+```{r}
+processed_data_RT_corrAns <- processed_data %>% 
+  filter((corrAns %in% c(1))) %>% 
+  droplevels()
+
+m_rt <- lmer(log(rt) ~ toy_id + (1|gameID), data=processed_data_RT_corrAns, REML=FALSE)
+summary(m_rt)
+
+m_rt_var <- lmer(log(rt) ~ toy_variant + (1|gameID), data=processed_data_RT_corrAns, REML=FALSE)
+summary(m_rt_var)
+```
+
+### raw plot for rt
+```{r}
+## making plot
+plot_rt <- processed_data_RT_corrAns %>% 
+  ggplot(aes(x=toy_id, y=rt, fill=toy_id)) +
+  geom_bar(aes(y=rt), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  xlab("condition") +
+  ylab("corrAns") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_rt
+```
+
+### plot for predicted RT from model
+```{r}
+df_rt <- ggpredict(m_rt, terms = c("toy_id"))
+
+## making plot
+plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  xlab("condition") +
+  ylab("toy_id") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_rt
+```
+
