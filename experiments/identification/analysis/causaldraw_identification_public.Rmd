@@ -7,6 +7,8 @@ output:
   html_document: default
 ---
 
+This script was written for identification task to analyze how accurately and quickly participants could match a presented drawing (visual explanation or depiction) to the target referent.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```

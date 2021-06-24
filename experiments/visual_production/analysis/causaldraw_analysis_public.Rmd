@@ -7,7 +7,7 @@ output:
   pdf_document: default
 ---
 
-This is analysis notebook for *causaldraw*. 
+This is analysis notebook for *causaldraw* (production of visual explanations and depictions)
 
 ## Hypotheses
 If participants are more selective when producing informative visual explanations than when producing faithful visual depictions, we hypothesize that visual explanations will contain less detail than visual depictions. 

@@ -32,6 +32,9 @@ require(tidyboot)
 ## note that this data has already been preprocessed so as to remove all identifiable information (originally collected on SONA)
 final_data <- read_csv("../results/csv/causaldraw_manipulationcheck_processed_data.csv") 
 
+#how many total participants?
+length(unique(final_data$gameID))
+
 ## remove empty cols
 final_data <- subset(final_data, select = -c(aID, batch, hitID, internal_node_id, prompt, response_ends_trial, stimulus_duration, trial_duration, wID, key_check))
 

@@ -1,0 +1,170 @@
+---
+title: "causaldraw_intervention_2"
+author: "Holly Huey"
+date: "3/1/2021"
+output: html_document
+---
+
+This script was written for the follow-up intervention_2 task of causaldraw_intervention. Previously, we analyzed RT and corrAns for locating *which element* to intervene on. 
+
+This follow-up analyzing corrAns for *which intervention* to use to produce an effect. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message = FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(tidyr)
+library(reshape2)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+require(tidyboot)
+library(emmeans)
+library(ggeffects)
+library(ggsignif)
+```
+
+## Load in data
+```{r message = FALSE}
+## note that this data has already been preprocessed so as to remove all identifiable information (originally collected on SONA)
+final_data <- read_csv("../results/csv/causaldraw_intervention_2_processed_data.csv") 
+
+#how many total participants?
+length(unique(final_data$gameID))
+
+## remove empty cols
+final_data <- subset(final_data, select = -c(prolificID, sessionID, studyID, experiment_id, credit_token, key_check, corr_key))
+```
+
+## Split datasets
+```{r}
+practice <- final_data %>%
+  filter(phase %in% c("practice")) %>% 
+  droplevels()
+
+processed_data <- final_data %>%
+  filter(!(phase %in% c("practice"))) %>% 
+  droplevels()
+```
+
+## Check for above chance in accuracy by condition
+```{r}
+## is explanatory above chance? 
+final_data_exp <- final_data %>%
+  filter(condition %in% c("explanatory"))
+
+above_chance_exp <- glmer(corrAns ~ 1 + (1|orig_gameID), family='binomial', data=final_data_exp)
+summary(above_chance_exp)
+
+## is depictive above chance? 
+final_data_dep <- final_data %>%
+  filter(condition %in% c("depictive"))
+
+above_chance_dep <- glmer(corrAns ~ 1 + (1|orig_gameID), family='binomial', data=final_data_dep)
+summary(above_chance_dep)
+```
+
+## Analyses for corrAns
+```{r}
+## same analysis as in the original causaldraw_intervention
+# m_corrAns <- glmer(corrAns ~ condition + condition*numCausal + condition*numFunctional + condition*numSymbol + condition*numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
+# summary(m_corrAns)
+
+m_corrAns <- glmer(corrAns ~ condition + numCausal + numFunctional + numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
+summary(m_corrAns)
+```
+
+### plot for corrAns
+```{r}
+df_corrAns <- ggpredict(m_corrAns, terms = c("condition"))
+
+## making plot
+plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  xlab("condition") +
+  ylab("corrAns") +
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylim(0,1) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_corrAns + scale_fill_manual(values=c("#919191", "#00766e"))
+```
+
+### raw plot for corrAns
+```{r}
+## making plot
+plot_corrAns <- final_data %>% 
+  ggplot(aes(x=condition, y=corrAns, fill=condition)) +
+  geom_bar(aes(y=corrAns), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  xlab("condition") +
+  ylab("corrAns") +
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylim(0,1) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_corrAns + scale_fill_manual(values=c("#919191", "#00766e"))
+```
+
+## Analyses for RT
+```{r}
+final_data_RT_corrAns <- final_data %>% 
+  filter((corrAns %in% c(1))) %>% 
+  droplevels()
+
+m_rt <- lmer(log(rt) ~ condition + condition*numCausal + condition*numFunctional + condition*numSymbol + condition*numBackground + (1|sketchID) + (1|orig_gameID), data=final_data_RT_corrAns, REML=FALSE)
+summary(m_rt) 
+```
+
+### plot for RT
+```{r}
+df_rt <- ggpredict(m_rt, terms = "condition")
+
+## making plot
+plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width = 0) +
+  xlab("condition") +
+  ylab("rt") +
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylim(0, 8000) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
+```
+
+### raw plot for RT
+```{r}
+## making plot
+plot_rt <- final_data_RT_corrAns %>%  
+  ggplot(aes(x=condition, y=rt, fill=condition)) +
+  geom_bar(aes(y=rt), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  xlab("condition") +
+  ylab("rt") +
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylim(0, 8000) +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
+```
+

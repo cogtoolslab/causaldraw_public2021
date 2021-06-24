@@ -6,6 +6,9 @@ output:
   html_notebook: default
   pdf_document: default
 ---
+
+This script was written to analyze the semantic annotations collected for *causaldraw* (visual production task)
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
