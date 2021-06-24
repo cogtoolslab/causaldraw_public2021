@@ -5,6 +5,8 @@ date: "11/8/2020"
 output: html_document
 ---
 
+This script was written for the control task to explore how accurately and quickly participants could infer which mechanical element to intervene on (without producing a drawing).
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
