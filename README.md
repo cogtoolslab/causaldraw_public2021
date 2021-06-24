@@ -80,13 +80,28 @@ In this experiment, participants placed their fingers on the "0" and "1" keys of
 </p>
 
 #### Where to find the experiment
-- `/experiments/intervention`
+- `/experiments/inference_where`
 
 #### Analysis
-- `/experiments/intervention/analysis/` contains analysis scripts (in particular, task performance is analyzed in `causaldraw_intervention_cogsci.rmd`. Here we analyzed response time and accuracy.)
+- `/experiments/inference_where/analysis/` contains analysis scripts (in particular, task performance is analyzed in `causaldraw_intervention_cogsci.rmd`. Here we analyzed response time and accuracy.)
 - `/analysis/utils/` contains helper functions 
 
 #### Data
 - `/analysis/results/csv/` contains preprocessed and anonymized CSVs for all participants
 
 ### Causal intervention experiment
+blurby blurb blurb blur
+
+<p align="center" style="font-size: smaller">
+  <img width="50%" src="readme_mats/intervention_2_task.png"></img>
+</p>
+
+#### Where to find the experiment
+- `/experiments/intervention_how`
+
+#### Analysis
+- `/experiments/intervention_how/analysis/` contains analysis scripts (in particular, task performance is analyzed in `causaldraw_intervention_cogsci.rmd`. Here we analyzed response time and accuracy.)
+- `/analysis/utils/` contains helper functions 
+
+#### Data
+- `/analysis/results/csv/` contains preprocessed and anonymized CSVs for all participants
