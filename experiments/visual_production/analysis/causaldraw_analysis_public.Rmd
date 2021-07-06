@@ -28,6 +28,7 @@ library(tidyr)
 library(dplyr)
 library(emmeans)
 library(ggeffects)
+library(stringr)
 ```
 
 ## Load in data
@@ -139,8 +140,6 @@ calc_age$age <- calc_age$DOT - calc_age$DOB
 mean(calc_age$age)
 ```
 
-glimpse(fullsketch_dat)
-
 ## Analyses
 *Number of strokes*
 Likewise for numStrokes, we will first attempt to fit the maximal model (see below), and if that fails to converge, specify a simpler model that only contains random intercepts for participants and items.
@@ -204,14 +203,13 @@ summary(m5)
 #if falls to converge
 m_time <- lmer(drawingTime ~ condition.x + (1 | gameID) + (1 | toy_type.x), data = drawing_time)
 summary(m_time)
-
-#compare both causaldraw batches
-m_time_comp <- lmer(drawingTime ~ condition.x + condition.x*replication_type.x + (1 | gameID) + (1 | toy_type.x), data = drawing_time)
-summary(m_time_comp)
 ```
 
 ### split by condition
 ```{r}
+stroke_dat$toy_id <- str_c(stroke_dat$toy_type, "_", stroke_dat$toy_variant)
+stroke_dat$sketchID <- str_c(stroke_dat$gameID, ".", stroke_dat$toy_id)
+
 ### depictive
 #pick out first stroke of startStrokeTime
 final_data_dep <- stroke_dat %>% 
@@ -235,6 +233,10 @@ drawingTime_dep <- as.data.frame(drawingTime_dep)
 
 mean(drawingTime_dep$drawingTime_dep)
 
+#extraxct highest value within sketchID group
+strokes_dep <- aggregate(currStrokeNum ~ sketchID, data = final_data_dep, max)
+mean(strokes_dep$currStrokeNum)
+
 ### explanatory
 #pick out first stroke of startStrokeTime
 final_data_exp <- stroke_dat %>% 
@@ -257,6 +259,10 @@ drawingTime_exp <- (calc_last_exp$endStrokeTime - calc_first_exp$startStrokeTime
 drawingTime_exp <- as.data.frame(drawingTime_exp)
 
 mean(drawingTime_exp$drawingTime_exp)
+
+#extraxct highest value within sketchID group
+strokes_exp <- aggregate(currStrokeNum ~ sketchID, data = final_data_exp, max)
+mean(strokes_exp$currStrokeNum)
 ```
 
 ### plot for drawing time
@@ -280,7 +286,6 @@ plot_drawingTime <- ggplot(df_drawingTime, aes(x, predicted, fill=x)) +
 plot_drawingTime + scale_fill_manual(values=c("#919191", "#00766e"))
 
 ggsave('../results/plots/causaldraw_drawingTime.pdf', height = 8, width = 4.25, units = 'cm', useDingbats = F)
-
 ```
 
 ```{r}
