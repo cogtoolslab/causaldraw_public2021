@@ -30,8 +30,26 @@ require(wesanderson)
 
 ## Load in and preprocess data
 ```{r message = FALSE}
-orig_data <- read_csv("../results/csv/causaldraw_annotations_processed_data.csv") 
-orig_survey <- read_csv("../results/csv/causaldraw_annotations_processed_survey_data.csv")
+## original batch run on mturk
+orig_data1 <- read_csv("../results/csv/causaldraw_annotations_processed_data.csv") 
+## collected more annotations to resolve some majority vote issues on SONA
+orig_data2 <- read_csv("../results/csv/causaldraw_annotation_patch2.csv") 
+## collected 2 more annotations for missing annotations for levers_1 on Prolific
+orig_data3 <- read_csv("../results/csv/causaldraw_annotation_patch3.csv") 
+
+#combine datasets as needed into full dataset
+orig_data <- mget(paste0('orig_data', c('1', '2', '3'))) %>%
+   dplyr::bind_rows()
+
+## original batch run on mturk
+orig_survey1 <- read_csv("../results/csv/causaldraw_annotations_processed_survey_data.csv")
+## collected more annotations to resolve some majority vote issues on SONA
+orig_survey2 <- read_csv("../results/csv/causaldraw_annotations_processed_patch2_survey_data.csv")
+## collected 2 more annotations for missing annotations for levers_1 on Prolific
+orig_survey3 <- read_csv("../results/csv/causaldraw_annotations_processed_patch3_survey_data.csv")
+
+orig_survey <- mget(paste0('orig_survey', c('1', '2', '3'))) %>%
+   dplyr::bind_rows()
 ```
 
 ## Initial exclusion checks
@@ -49,8 +67,6 @@ cleanup <- orig_data %>%
   filter(!(roi_labelName %in% c("short"))) %>%
   filter(!(roi_labelName %in% c("unintelligible"))) %>%
   filter(!(roi_labelName %in% c("light")))
-
-# cleanup <- orig_data
 
 #how many participants did not complete the full data session?
 checkcomplete <- orig_data %>%
@@ -151,12 +167,12 @@ rm(combo_key)
 ```{r message = FALSE}
 #load in reference dataframes
 #all catch trials are "depictive" sketches
-reference_A <- read_csv("../results/csv/causaldraw_annotations_label_data_gears1reference.csv")
-reference_B <- read_csv("../results/csv/causaldraw_annotations_label_data_gears2reference.csv")
-reference_C <- read_csv("../results/csv/causaldraw_annotations_label_data_levers1reference.csv")
-reference_D <- read_csv("../results/csv/causaldraw_annotations_label_data_levers2reference.csv")
-reference_E <- read_csv("../results/csv/causaldraw_annotations_label_data_pulleys1reference.csv")
-reference_F <- read_csv("../results/csv/causaldraw_annotations_label_data_pulleys2reference.csv")
+reference_A <- read_csv("../results/csv/reference/causaldraw_annotations_label_data_gears1reference.csv")
+reference_B <- read_csv("../results/csv/reference/causaldraw_annotations_label_data_gears2reference.csv")
+reference_C <- read_csv("../results/csv/reference/causaldraw_annotations_label_data_levers1reference.csv")
+reference_D <- read_csv("../results/csv/reference/causaldraw_annotations_label_data_levers2reference.csv")
+reference_E <- read_csv("../results/csv/reference/causaldraw_annotations_label_data_pulleys1reference.csv")
+reference_F <- read_csv("../results/csv/reference/causaldraw_annotations_label_data_pulleys2reference.csv")
 
 data.catch <- as.data.frame(data.catch)
 reference_A <- as.data.frame(reference_A)
@@ -213,9 +229,6 @@ rm(catcher, check.data.catch, reference_A, reference_B, reference_C, reference_D
 #remove participants that did the orig causaldraw
 data <- data %>%
   filter(!(wID %in% c("AVBRJBJONL47I")))
-
-# check <- orig_data11 %>% 
-  # filter((gameID %in% c("0495-db5fa7cd-9b89-48bc-95aa-bc8f0fdb76d3")))
 ```
 
 ## Inspect dataframe
@@ -242,29 +255,22 @@ sketchesrun <- list(unique(data$sketchID))
 sketchesrun <- as.data.frame(sketchesrun)
 colnames(sketchesrun)[1] <- "sketches"
 
-allsketches <- read_csv("../results/csv/allsketches.csv") 
+allsketches <- read_csv("../results/csv/reference/allsketches.csv") 
 
 #extract which sketches are not been run yet
 missingsketches <- setdiff(allsketches,sketchesrun)
 glimpse(missingsketches)
 
-#have all sketches been annotated at least 3 times? (note to self: removed batch_id_across machines, because batch_id's of pilots after '5' will not match the previous batches)
+#have all sketches been annotated at least 3 times? 
 sketchcount <- data %>% 
   group_by(sketchID) %>% 
   summarise(count = n_distinct(gameID))
 hist(sketchcount$count)
 
 sketchcount$check <- ifelse(sketchcount$count < 3, TRUE, FALSE)
-needmore <- subset(sketchcount, count < 3)
-glimpse(needmore)
-# write.csv(exportneed,'../stimuli/causaldraw_annotations_patch.csv', row.names = FALSE)
 
-need1 <- subset(needmore, count == 2)
-need2 <- subset(needmore, count == 1)
-length(sketchcount$sketchID)
-
-toomany <- subset(sketchcount, count > 3)
-glimpse(toomany)
+check <- sketchcount %>% 
+  filter(TRUE %in% c('check'))
 ```
 
 ## Inspect batches
@@ -291,90 +297,36 @@ missingbatches <- setdiff(allbatches,batchesrun)
 glimpse(missingbatches)
 ```
 
-## Remove excess annotators
+## Save out data
 ```{r}
-#subset sketches that have been annotated by 3 and only first 3 annotators
+#subset sketches that have been annotated by 3 annotators
 final_data <- data %>%
   group_by(sketchID) %>%
   mutate(count = match(gameID, unique(gameID))) %>%
-  filter(count <= 3)
+  filter(count >= 3)
 
-write.csv(final_data, '../results/csv/causaldraw_annotation_final_data.csv')
-# write.csv(final_data, '../results/csv/causaldraw_annotation_final_all_svg_data.csv')
-# write.csv(final_data, '../results/csv/causaldraw_annotation_final_svg_data.csv')
+write.csv(final_data, '../results/csv/causaldraw_annotation_final_data_public.csv')
 
-glimpse(unique(final_data$roi_labelName))
+length(unique(final_data$sketchID))
 ```
 
 #post-demographic analysis
 ```{r}
 ## count gender 
-# note to self: combine by aID because old bug prevented gameID collection in one of the survey plugins (this is not a problem for later studies)
-sketches_survey <- merge(final_data, orig_survey, by = c("aID"))
-
-#preprocessing
-processed <- sketches_survey %>%
-  separate(responses, c("participantSex", "judgedDifficulty"), ":", remove = FALSE)
-
-#make text pretty
-processed$judgedDifficulty <- substr(processed$judgedDifficulty,2,2) 
-colnames(processed)[which(names(processed) == "judgedDifficulty")] <- "gender"
-
-#count
-count_gender <- processed %>% 
-  filter(gender %in% c("F", "M", "N"))
-count_gender_ <- count_gender[!duplicated(count_gender$aID),]
+count_gender <- orig_survey %>% 
+  filter(gender %in% c("F"))
+count_gender_ <- count_gender[!duplicated(count_gender$gameID.x),]
 table(count_gender_$gender)
 
- ## calculate mean age
-substrRight <- function(x, n){
-  substr(x, nchar(x)-n+1, nchar(x))
-}
-
-processed <- processed %>%
-  separate(responses, c("participantAge", "participantComments"), ",", remove = FALSE)
-processed$DOB <- substrRight(processed$participantComments,5) 
-processed$DOB <- substr(processed$DOB,1,4) 
-calc_age <- processed[grep('^[0-9]', processed$DOB),]
+## calculate age
+calc_age <- orig_survey %>% 
+  filter(trial_type %in% c("survey-text"))
+calc_age <- calc_age[!duplicated(calc_age$gameID.x),]
+calc_age$DOB <- noquote(calc_age$DOB)
 calc_age$DOB <- as.numeric(calc_age$DOB)
-calc_age_ <- calc_age$DOB
-calc_age_ <- as.data.frame(calc_age_)
-colnames(calc_age_) <- c("DOB")
-calc_age_$DOT <- 2020
-calc_age_ <- na.omit(calc_age_)
-calc_age_$age <- calc_age_$DOT - calc_age_$DOB
-mean(calc_age_$age)
-```
-
-
-```{r}
-#export list of workerIDs
-length(unique(final_data$wID))
-
-causaldraw_annotations_workerID <- as.data.frame(unique(final_data$wID))
-colnames(causaldraw_annotations_workerID)[1] <- "workerID"
-
-causaldraw_workerID <- read_csv('../results/csv/causaldraw_workerID.csv')
-checkDupes <- intersect(causaldraw_workerID$workerID, causaldraw_annotations_workerID$workerID)
-checkDupes
-````
-
-## Inspect exclusions
-```{r}
-#how many did we need to exclude from the total ran?
-totalrun - length(unique(data$gameID))
-
-#how many did we need to exclude from the total paid?
-totalpaid - length(unique(data$gameID))
-
-#percentage excluded from the total ran?
-(totalrun - length(unique(data$gameID)))/totalrun
-
-#percentage excluded from the total paid?
-(totalpaid - length(unique(data$gameID)))/totalpaid
-
-#cleanup environment
-rm(sketchcount, needmore, toomany, cleanup)
+calc_age <- calc_age[!is.na(calc_age$DOB), ]
+calc_age$age <- calc_age$DOT - calc_age$DOB
+mean(calc_age$age)
 ```
 
 ## Visualize ALL drawn elements, broken down by toy_id
@@ -427,6 +379,7 @@ props.plot + scale_fill_manual(values=wes_palette(n=4, name="Royal1"))
 
 ggsave('../results/plots/causaldraw_strokeType_proportion.pdf', height = 18, width =8, units = 'cm', useDingbats = F)
 ```
+
 #### diff colors, formatting for cogsci
 ```{r}
 #calculate proportion for all drawn elements
@@ -660,7 +613,7 @@ nonentity.props.plot + scale_fill_manual(values=wes_palette(n=4, name="Royal1"))
 
 ```{r}
 #calculate proportion of RT for all drawn elements
-causaldraw_orig_strokeData <- read_csv('../results/csv/causaldraw_stroke_data_run1.csv')
+causaldraw_orig_strokeData <- read_csv('../results/csv/reference/causaldraw_stroke_data_run1.csv')
 causaldraw_orig_strokeData <- as.data.frame(causaldraw_orig_strokeData)
 
 #match colnames causaldraw_orig_strokeData and finaldata
@@ -723,9 +676,6 @@ props_rtMean <- mm %>%
   group_by(condition, strokeType) %>%
   summarise(mean = mean(totalStrokeTime)) 
 
-
-
-
 #plot proportion
 props.plot_rtMean <- props_rtMean %>% 
   ggplot(aes(x=condition, y=mean, fill = strokeType)) +
@@ -769,20 +719,10 @@ chisq.test(entityTable)
 ```{r}
 # 1. Do people selectively attend to more causally relevant information in the explanation condition, 
 # and therefore, draw a higher proportion of causal elements? 
-m1 <- glmer(causal ~ condition + (1 + condition | orig_gameID) + (1 | sketchID) + (1 | toy_type) , family="binomial", data = onlyentities)
+m1 <- glmer(causal ~ condition + (1 + condition|orig_gameID) + (1|sketchID) + (1|toy_type) , family="binomial", data = onlyentities)
 summary(m1)
-```
 
-```{r}
-#check across all data if people draw more mechanical elements
-final_data$causalfunction <- ifelse(final_data$strokeType=='causal', TRUE, 
-                                    ifelse(final_data$strokeType=='functional', TRUE, 
-                                           FALSE))
-
-m_all <- glmer(causalfunction ~ condition + (1 + condition | orig_gameID) + (1 | sketchID) + (1 | toy_type) , family="binomial", data = final_data)
-summary(m_all)
-
-m_entities <- glmer(causal ~ condition + (1 + condition | orig_gameID) + (1 | sketchID), family="binomial", data = onlyentities)
+m_entities <- glmer(causal ~ condition + (1|orig_gameID) + (1|sketchID), family="binomial", data = onlyentities)
 summary(m_entities)
 ```
 
@@ -846,7 +786,7 @@ summary(m5)
 ```
 
 ```{r}
-#4. Do people more time drawing causal elements in the explanation condition?
+#4. Do people spend more time drawing causal elements in the explanation condition?
 m6 <- lmer(log(totalStrokeTime) ~ condition*causal + (1 | orig_gameID) + (1 | toy_type), data = mm_onlyentities)
 summary(m6)
 ```
