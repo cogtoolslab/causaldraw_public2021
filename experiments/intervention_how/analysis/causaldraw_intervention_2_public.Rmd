@@ -31,7 +31,7 @@ library(ggsignif)
 ## Load in data
 ```{r message = FALSE}
 ## note that this data has already been preprocessed so as to remove all identifiable information (originally collected on SONA)
-final_data <- read_csv("../results/csv/causaldraw_intervention_2_processed_data.csv") 
+final_data <- read_csv("../results/csv/causaldraw_intervention_2_processed_data_random_sample.csv") 
 
 #how many total participants?
 length(unique(final_data$gameID))
@@ -59,7 +59,9 @@ final_data_exp <- final_data %>%
 
 above_chance_exp <- glmer(corrAns ~ 1 + (1|orig_gameID), family='binomial', data=final_data_exp)
 summary(above_chance_exp)
+```
 
+```{r}
 ## is depictive above chance? 
 final_data_dep <- final_data %>%
   filter(condition %in% c("depictive"))
@@ -86,10 +88,17 @@ df_corrAns <- ggpredict(m_corrAns, terms = c("condition"))
 plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  geom_signif(annotation = "***",
+          y_position = 0.75,
+          xmin = "depictive",
+          xmax = "explanatory",
+          tip_length = 0) +
+  # geom_text(aes(label = predicted), position=position_dodge(width=0.9), vjust=-0.25) +
   xlab("condition") +
   ylab("corrAns") +
   scale_x_discrete(labels=c("depict", "explain")) +
   ylim(0,1) +
+  geom_hline(yintercept=0.5, linetype='dashed', color='black', size=0.5) +
   theme_light() +
   theme(axis.text.x = element_text(size = 6), 
         axis.title.x = element_blank(),
@@ -97,6 +106,8 @@ plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
         legend.position = "none")
 
 plot_corrAns + scale_fill_manual(values=c("#919191", "#00766e"))
+
+ggsave('../results/plots/intervention_2_corrAns.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ### raw plot for corrAns
@@ -136,6 +147,12 @@ df_rt <- ggpredict(m_rt, terms = "condition")
 plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width = 0) +
+  geom_signif(annotation = "ns",
+        y_position = 7000,
+        xmin = "depictive",
+        xmax = "explanatory",
+        tip_length = 0) +
+  geom_text(aes(label = predicted), position=position_dodge(width=0.9), vjust=-0.25) +
   xlab("condition") +
   ylab("rt") +
   scale_x_discrete(labels=c("depict", "explain")) +
@@ -147,6 +164,8 @@ plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
         legend.position = "none")
 
 plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
+
+ggsave('../results/plots/intervention_2_rt.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ### raw plot for RT
