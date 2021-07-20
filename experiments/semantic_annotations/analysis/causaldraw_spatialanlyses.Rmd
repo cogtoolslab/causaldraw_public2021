@@ -1,0 +1,240 @@
+---
+title: "causaldraw_spatialanalyses"
+author: "Holly Huey"
+date: "6/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message = FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(tidyr)
+library(reshape2)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+require(tidyboot)
+library(emmeans)
+library(ggeffects)
+library(ggsignif)
+require(wesanderson)
+```
+
+## Load in data
+```{r message = FALSE}
+orig_data <- read_csv("../results/csv/causaldraw_annotation_final_spatial_error_random_sample.csv")
+orig_data <- subset(orig_data, select = -c(X1))
+```
+
+## Split dataframes
+```{r}
+omissions <- orig_data %>% 
+  filter(omission %in% c(1))
+
+excluding_omissions <- orig_data %>% 
+  filter(omission %in% c(0))
+
+excluding_omissions_exp <- excluding_omissions %>% 
+  filter(condition %in% c('explanatory'))
+
+# mean(excluding_omissions_exp$loc_err)
+mean(excluding_omissions_exp$norm_loc_err)
+
+# mean(excluding_omissions_exp$size_err)
+mean(excluding_omissions_exp$norm_size_err)
+
+excluding_omissions_dep <- excluding_omissions %>% 
+  filter(condition %in% c('depictive'))
+
+# mean(excluding_omissions_dep$loc_err)
+mean(excluding_omissions_dep$norm_loc_err)
+
+# mean(excluding_omissions_dep$size_err)
+mean(excluding_omissions_dep$norm_size_err)
+```
+
+```{r}
+excluding_omissions$rename_type_col <- excluding_omissions$type
+excluding_omissions$rename_type_col[excluding_omissions$rename_type_col == "functional"] <- "non-causal"
+glimpse(excluding_omissions)
+```
+
+## Checking things out
+```{r}
+library(plyr)
+ddply(excluding_omissions,condition~stimuli,summarise,mean=mean(loc_err))
+ddply(excluding_omissions,condition~stimuli,summarise,mean=mean(size_err))
+
+## make plot of ctr_error
+plot_ctr_error <- excluding_omissions %>%  
+  ggplot(aes(x=condition, y=loc_err, fill=condition)) +
+  geom_bar(aes(y=loc_err), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~stimuli) +
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylab("translation error (px)") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+plot_ctr_error + scale_fill_manual(values=c("#919191", "#00766e"))
+
+ggsave('../results/plots/causaldraw_spatial_translation_error.pdf', height = 18, width =24, units = 'cm', useDingbats = F)
+```
+
+```{r}
+## make plot of size_err
+plot_size_err <- excluding_omissions %>%  
+  ggplot(aes(x=condition, y=size_err, fill=condition)) +
+  geom_bar(aes(y=size_err), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~stimuli) +
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylab("size error (px)") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+plot_size_err + scale_fill_manual(values=c("#919191", "#00766e"))
+
+ggsave('../results/plots/causaldraw_spatial_size_error.pdf', height = 18, width =24, units = 'cm', useDingbats = F)
+```
+
+```{r}
+## make plot of normalized location error
+plot_norm_loc_err <- excluding_omissions %>%  
+  ggplot(aes(x=condition, y=norm_loc_err, fill=condition)) +
+  geom_bar(aes(y=loc_err), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~rename_type_col)+
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylab("location error (px)") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+plot_norm_loc_err + scale_fill_manual(values=c("#919191", "#00766e"))
+```
+
+```{r}
+## make plot of normalized size error
+plot_norm_size_err <- excluding_omissions %>%  
+  ggplot(aes(x=condition, y=norm_size_err, fill=condition)) +
+  geom_bar(aes(y=norm_size_err), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~rename_type_col)+
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylab("size error (px)") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+plot_norm_size_err + scale_fill_manual(values=c("#919191", "#00766e"))
+```
+
+## Analyses
+```{r}
+### WITHOUT normalizing
+## diff in location
+m_loc_err <- lmer(loc_err ~ condition + (1|stimuli) + (1|sketchID), data=excluding_omissions)
+summary(m_loc_err)
+```
+
+```{r}
+## diff in size
+m_size_err <- lmer(size_err ~ condition + (1|stimuli) + (1|sketchID), data=excluding_omissions)
+summary(m_size_err)
+```
+
+
+```{r}
+### WITH normalizing
+## diff in location
+m_norm_loc_err <- lmer(norm_loc_err ~ condition + (1|stimuli) + (1|sketchID), data=excluding_omissions)
+summary(m_norm_loc_err)
+```
+
+
+```{r}
+## new model for interaction between condition and type
+m_loc_type <- lmer(norm_loc_err ~ condition*rename_type_col + (1|stimuli) + (1|sketchID), data=excluding_omissions)
+summary(m_loc_type)
+
+## getting predictions
+df_norm_loc_err <- ggpredict(m_loc_type, terms = c("condition", "rename_type_col"))
+df_norm_loc_err
+
+## convert to df to flatten formatting
+df_loc <- as.data.frame(df_norm_loc_err)
+
+## reorder groups for facet_grid
+df_loc$group_reorder = factor(df_loc$group, levels=c('causal','non-causal','background'))
+
+## make plot of normalized location error
+plot_norm_loc_err <- ggplot(df_loc, aes(x, predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width = 0) +
+  facet_grid(.~group_reorder)+
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylab("location error ratio") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+plot_norm_loc_err + scale_fill_manual(values=c("#919191", "#00766e"))
+
+ggsave('../results/plots/causaldraw_normalized_location_error.pdf', height = 8, width = 8, units = 'cm', useDingbats = F)
+```
+
+```{r}
+## diff in size
+m_norm_size_err <- lmer(norm_size_err ~ condition + (1|stimuli) + (1|sketchID), data=excluding_omissions)
+summary(m_norm_size_err)
+```
+
+```{r}
+## new model for interaction between condition and type
+m_size_type <- lmer(norm_size_err ~ condition*rename_type_col + (1|stimuli) + (1|sketchID), data=excluding_omissions)
+summary(m_size_type)
+
+## getting predictions
+df_norm_size_err <- ggpredict(m_size_type, terms = c("condition", "rename_type_col"))
+df_norm_size_err
+
+## convert to df to flatten formatting
+df_size <- as.data.frame(df_norm_size_err)
+
+## reorder groups for facet_grid
+df_size$group_reorder = factor(df_size$group, levels=c('causal','non-causal','background'))
+
+## make plot of normalized location error
+plot_norm_loc_err <- ggplot(df_size, aes(x, predicted, fill=x)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width = 0) +
+  facet_grid(.~group_reorder)+
+  scale_x_discrete(labels=c("depict", "explain")) +
+  ylab("size error ratio") +
+  theme_light() +
+  theme(axis.text.x = element_text(size = 6), 
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+plot_norm_loc_err + scale_fill_manual(values=c("#919191", "#00766e"))
+
+ggsave('../results/plots/causaldraw_normalized_size_error.pdf', height = 8, width = 8, units = 'cm', useDingbats = F)
+```
+
+```{r}
+## diff in number of elements omitted
+m_omitted <- glmer(omission ~ condition + (1|stimuli) + (1|sketchID), family="binomial", data=orig_data)
+summary(m_omitted)
+```
+
+
+
