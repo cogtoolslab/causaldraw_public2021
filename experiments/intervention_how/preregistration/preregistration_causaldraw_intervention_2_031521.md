@@ -92,9 +92,9 @@ m_reducedcorrAns <- glmer(corrAns ~ condition + condition*numCausal + condition*
 ### Data exclusion
 Sessions will be excluded from analysis based on the below exclusion criteria: 
 
-Technical failure: Participants will complete an exit survey at the end of the experiment. If participants report that any of the sketches or images of machines did not display properly (e.g., images did not load or did not load at the same time) or if the interface did not function properly on a trial (e.g., trial did not advance after the participant made a keyboard response), all data from that session will be excluded from subsequent analysis. 
+1. Technical failure: Participants will complete an exit survey at the end of the experiment. If participants report that any of the sketches or images of machines did not display properly (e.g., images did not load or did not load at the same time) or if the interface did not function properly on a trial (e.g., trial did not advance after the participant made a keyboard response), all data from that session will be excluded from subsequent analysis. 
 
-Session-level accuracy-based exclusion: 
+2. Session-level accuracy-based exclusion: 
 All data from a session will be excluded if accuracy is less than 50% (i.e., if participants correctly responded to only 3 out of the 6 test trials). 
 
 3. Trial-level response time outlier exclusions: 
