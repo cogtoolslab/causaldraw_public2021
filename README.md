@@ -58,10 +58,9 @@ A critical test of how useful such communicative strategies are is to evaluate h
 Here we tested how well naive viewers could use the collected visual explanations and depictions to quickly and accurately identify the referent of the drawing (i.e., which original machine that drawing represented). In this experiment, participants placed their cursor at the center of their screen (at a crosshair) and were presented with a circular array of photographs of the original machines. When a sketch appeared at the center of the array, participants were tasked to click on the machine that drawing represented.
 
 <p align="center" style="font-size: smaller">
-  <video width="100%" loop>
-  <source src="cat_example.mp4" type="video/mp4">
-</video>
+  <img width="30%" src="readme_mats/identification_task.png"></img>
 </p>
+
 
 #### Where to find the experiment
 - `/experiments/identification`
