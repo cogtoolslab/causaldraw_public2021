@@ -33,7 +33,6 @@ library(ggsignif)
 ```{r message = FALSE}
 ## note that this data has already been preprocessed so as to remove all identifiable information (originally collected on SONA)
 final_data <- read_csv("../results/csv/causaldraw_identification_processed_data_random_sample.csv")
-final_data <- subset(final_data, select = -c(X1))
 ```
 
 ## how many responses per sketch
@@ -56,11 +55,11 @@ final_data_RT <- final_data %>%
 
 final_data_RT_exp <- final_data_RT %>% 
   filter(condition %in% c('explanatory'))
-mean(final_data_exp$rt)
+mean(final_data_RT_exp$rt)
   
 final_data_RT_dep <- final_data_RT %>% 
   filter(condition %in% c('depictive'))
-mean(final_data_dep$rt)
+mean(final_data_RT_dep$rt)
 ```
 
 ##Analyses for RT
@@ -76,20 +75,27 @@ m_reducedRT <- lmer(log(rt) ~ condition + condition*numCausal + condition*numFun
 summary(m_reducedRT)
 ```
 
+### assessing model fit w/o parameters
+```{r}
+simple_RT <- lmer(log(rt) ~ condition + (1|sketchID) + (1|orig_gameID), data=final_data_RT, REML=FALSE)
+summary(simple_RT)
+```
+
 ### plot for RT
 ```{r}
 ## getting predictions
-df_rt <- ggpredict(m_reducedRT, terms = "condition")
+df_rt <- ggpredict(simple_RT, terms = "condition")
 
 ## making plot
 plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width = 0) +
-  geom_signif(annotation = "**",
+  geom_signif(annotation = "***",
           y_position = 2750,
           xmin = "depictive",
           xmax = "explanatory",
           tip_length = 0) +
+  # geom_text(aes(label = predicted), position=position_dodge(width=0.9), vjust=-0.25) +
   xlab("condition") +
   ylab("rt") +
   scale_x_discrete(labels=c("depict", "explain")) +
@@ -103,7 +109,7 @@ plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
 plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
 
 # ggsave('../results/plots/identification_rt.pdf', height = 8, width = 6,  units = 'cm', useDingbats = F)
-ggsave('../results/plots/identification_rt.pdf', height = 8, width = 3.25,  units = 'cm', useDingbats = F)
+ggsave('../results/plots/identification_rt_simple.pdf', height = 8, width = 3.25,  units = 'cm', useDingbats = F)
 ```
 
 ##Analyses for corrAns
@@ -126,19 +132,30 @@ m_reducedcorrAns <- glmer(corrAns ~ condition + condition*numCausal + condition*
 summary(m_reducedcorrAns)
 ```
 
+## assessing model fit w/o predictors
+```{r}
+simple_m <- glmer(corrAns ~ condition + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
+summary(simple_m)
+```
+
+```{r}
+anova(simple_m, m_reducedcorrAns)
+```
+
 ### plot for corrAns
 ```{r}
-df_corrAns <- ggpredict(m_reducedcorrAns, terms = c("condition"))
+df_corrAns <- ggpredict(simple_m, terms = c("condition"))
 
 ## making plot
 plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
-  geom_signif(annotation = "**",
+  geom_signif(annotation = "***",
           y_position = 0.95,
           xmin = "depictive",
           xmax = "explanatory",
           tip_length = 0) +
+  geom_text(aes(label = predicted), position=position_dodge(width=0.9), vjust=-0.25) +
   xlab("condition") +
   ylab("corrAns") +
   scale_x_discrete(labels=c("depict", "explain")) +
@@ -153,7 +170,7 @@ plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
 plot_corrAns + scale_fill_manual(values=c("#919191", "#00766e"))
 
 # ggsave('../results/plots/identification_corrAns.pdf', height = 8, width = 6,  units = 'cm', useDingbats = F)
-ggsave('../results/plots/identification_corrAns.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
+ggsave('../results/plots/identification_corrAns_simple.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ### check for above chance in accuracy 

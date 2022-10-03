@@ -80,9 +80,19 @@ m_corrAns <- glmer(corrAns ~ condition + numCausal + numFunctional + numBackgrou
 summary(m_corrAns)
 ```
 
+## assessing model fit w/o predictors
+```{r}
+simple_m <- glmer(corrAns ~ condition + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
+summary(simple_m)
+```
+
+```{r}
+anova(simple_m, m_corrAns)
+```
+
 ### plot for corrAns
 ```{r}
-df_corrAns <- ggpredict(m_corrAns, terms = c("condition"))
+df_corrAns <- ggpredict(simple_m, terms = c("condition"))
 
 ## making plot
 plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
@@ -98,7 +108,7 @@ plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
   ylab("corrAns") +
   scale_x_discrete(labels=c("depict", "explain")) +
   ylim(0,1) +
-  geom_hline(yintercept=0.5, linetype='dashed', color='black', size=0.5) +
+  geom_hline(yintercept=0.33, linetype='dashed', color='black', size=0.5) +
   theme_light() +
   theme(axis.text.x = element_text(size = 6), 
         axis.title.x = element_blank(),
@@ -107,7 +117,7 @@ plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
 
 plot_corrAns + scale_fill_manual(values=c("#919191", "#00766e"))
 
-ggsave('../results/plots/intervention_2_corrAns.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
+ggsave('../results/plots/intervention_2_corrAns_simple.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ### raw plot for corrAns
@@ -137,6 +147,12 @@ final_data_RT_corrAns <- final_data %>%
 
 m_rt <- lmer(log(rt) ~ condition + condition*numCausal + condition*numFunctional + condition*numSymbol + condition*numBackground + (1|sketchID) + (1|orig_gameID), data=final_data_RT_corrAns, REML=FALSE)
 summary(m_rt) 
+```
+
+### assess model fit w/o parameter estimates
+```{r}
+RT_simple <- lmer(log(rt) ~ condition + (1|sketchID) + (1|orig_gameID), data=final_data_RT_corrAns, REML=FALSE)
+summary(RT_simple) 
 ```
 
 ### plot for RT

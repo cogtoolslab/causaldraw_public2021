@@ -33,7 +33,7 @@ require(wesanderson)
 ```{r message = FALSE}
 # note that this loads in preprocessed data so as to remove all identifiable information (originally collected on Prolific and SONA)
 final_data <- read_csv("../results/csv/causaldraw_intervention_processed_data_2AFC_random_sample.csv")
-final_data <- subset(final_data, select = -c(X1))
+final_data <- subset(final_data, select = -c(...1))
 ```
 
 ## Inspect sketches
@@ -83,16 +83,22 @@ m_rt <- lmer(log(rt_annotationToKeyResponse) ~ condition + condition*numCausal +
 summary(m_rt)
 ```
 
+### assessing model fit w/o param estimates
+```{r}
+RT_simple <- lmer(log(rt_annotationToKeyResponse) ~ condition + (1|orig_gameID), data=final_data_RT_corrAns, REML=FALSE)
+summary(RT_simple)
+```
+
 ### plot for RT
 ```{r}
 ## getting predictions
-df_rt <- ggpredict(m_rt, terms = "condition")
+df_rt <- ggpredict(RT_simple, terms = "condition")
 
 ## making plot
 plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width = 0) +
-  geom_signif(annotation = "ns",
+  geom_signif(annotation = "*",
             y_position = 4500,
             xmin = "depictive",
             xmax = "explanatory",
@@ -110,7 +116,7 @@ plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
 
 plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
 
-ggsave('../results/plots/intervention_rt.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
+ggsave('../results/plots/intervention_rt_simple.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ## Analyses for corrAns
@@ -125,15 +131,25 @@ m_corrAns <- glmer(corrAns ~ condition + condition*numCausal + condition*numFunc
 summary(m_corrAns)
 ```
 
+## assessing model fit w/o predictors
+```{r}
+simple_m <- glmer(corrAns ~ condition + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
+summary(simple_m)
+```
+
+```{r}
+anova(simple_m, m_corrAns)
+```
+
 ### plot for corrAns
 ```{r}
-df_corrAns <- ggpredict(m_corrAns, terms = c("condition"))
+df_corrAns <- ggpredict(simple_m, terms = c("condition"))
 
 ## making plot
 plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
-  geom_signif(annotation = "**",
+  geom_signif(annotation = "ns",
             y_position = 0.9,
             xmin = "depictive",
             xmax = "explanatory",
@@ -152,7 +168,7 @@ plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
 
 plot_corrAns + scale_fill_manual(values=c("#919191", "#00766e"))
 
-ggsave('../results/plots/intervention_corrAns.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
+ggsave('../results/plots/intervention_corrAns_checking.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ### check for above chance in accuracy 
@@ -210,5 +226,55 @@ plot_sketchType <- sketchType %>%
 ggsave('../results/plots/sketchType.pdf', height = 8, width = 6,  units = 'cm', useDingbats = F)
 ```
 
+## follow-up analysis
+here we compare how explanations with MORE structural information vs. LESS structural information do on this part-discrimination task. 
+```{r}
+## median split data by more or less structural details for explanatory drawings
+high_structural_exp <- subset(final_data_exp, propBackground > median(final_data_exp$propBackground))
+low_structural_exp <- subset(final_data_exp, propBackground < median(final_data_exp$propBackground))
+
+more_structure <- glmer(corrAns ~ numCausal + numFunctional + numSymbol + numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=high_structural_exp, nAGQ=0)
+summary(more_structure)
+```
+
+```{r}
+low_structure <- glmer(corrAns ~ numCausal + numFunctional + numSymbol + numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=low_structural_exp, nAGQ=0)
+summary(low_structure)
+```
+
+Same for depictions. 
+```{r}
+## median split data by more or less structural details for depictive drawings
+high_structural_dep <- subset(final_data_exp, propBackground > median(final_data_dep$propBackground))
+low_structural_dep <- subset(final_data_exp, propBackground < median(final_data_dep$propBackground))
+
+more_structure_dep <- glmer(corrAns ~ numCausal + numFunctional + numSymbol + numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=high_structural_dep, nAGQ=0)
+summary(more_structure_dep)
+```
+```{r}
+low_structure_dep <- glmer(corrAns ~ numCausal + numFunctional + numSymbol + numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=low_structural_dep, nAGQ=0)
+summary(low_structure_dep)
+```
+
+Or drawings with both causal and non-causal parts, vs. drawings that only had one or the other. If there were no impact of the drawing content on part-discrimination performance, then we should see no difference between trials when making these comparisons. 
+```{r}
+## split by causal + functional, only causal, and only functional
+only_causal <- subset(final_data, propFunctional == 0)
+only_functional <- subset(final_data, propCausal == 0)
+
+## original model with both causal + functional
+m_corrAns <- glmer(corrAns ~ condition + condition*numCausal + condition*numFunctional + condition*numSymbol + condition*numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
+summary(m_corrAns)
+```
+
+```{r}
+causal_check <- glmer(corrAns ~ condition + condition*numCausal + condition*numFunctional + condition*numSymbol + condition*numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=only_causal, nAGQ=0)
+summary(causal_check)
+```
+
+```{r}
+functional_check <- glmer(corrAns ~ condition + condition*numCausal + condition*numFunctional + condition*numSymbol + condition*numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=only_functional, nAGQ=0)
+summary(functional_check)
+```
 
 
