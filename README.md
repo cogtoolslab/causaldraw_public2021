@@ -61,6 +61,7 @@ Here we tested how well naive viewers could use the collected visual explanation
   <img width="30%" src="readme_mats/identification_task.png"></img>
 </p>
 
+
 #### Where to find the experiment
 - `/experiments/identification`
 
@@ -90,7 +91,7 @@ In this experiment, participants placed their fingers on the "0" and "1" keys of
 - `/analysis/results/csv/` contains preprocessed and anonymized CSVs for all participants
 
 ### Causal intervention experiment
-blurby blurb blurb blur
+In addition to conveying which parts of the machine are most causally relevant, an effective visual explanation helps a viewer infer what kind of intervention is needed to produce the desired effect. Each participant was presented with a randomly sampled drawing of each of the six machines, and then asked to select the action that they thought they needed to perform in order to turn on the light. For each machine, participants selected from among three actions: Pull, Push, and Rotate.
 
 <p align="center" style="font-size: smaller">
   <img width="50%" src="readme_mats/intervention_2_task.png"></img>
