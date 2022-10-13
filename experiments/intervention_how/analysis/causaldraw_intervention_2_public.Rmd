@@ -2,7 +2,8 @@
 title: "causaldraw_intervention_2"
 author: "Holly Huey"
 date: "3/1/2021"
-output: html_document
+output:
+  html_document: default
 ---
 
 This script was written for the follow-up intervention_2 task of causaldraw_intervention. Previously, we analyzed RT and corrAns for locating *which element* to intervene on. 
@@ -40,37 +41,7 @@ length(unique(final_data$gameID))
 final_data <- subset(final_data, select = -c(prolificID, sessionID, studyID, experiment_id, credit_token, key_check, corr_key))
 ```
 
-## Split datasets
-```{r}
-practice <- final_data %>%
-  filter(phase %in% c("practice")) %>% 
-  droplevels()
-
-processed_data <- final_data %>%
-  filter(!(phase %in% c("practice"))) %>% 
-  droplevels()
-```
-
-## Check for above chance in accuracy by condition
-```{r}
-## is explanatory above chance? 
-final_data_exp <- final_data %>%
-  filter(condition %in% c("explanatory"))
-
-above_chance_exp <- glmer(corrAns ~ 1 + (1|orig_gameID), family='binomial', data=final_data_exp)
-summary(above_chance_exp)
-```
-
-```{r}
-## is depictive above chance? 
-final_data_dep <- final_data %>%
-  filter(condition %in% c("depictive"))
-
-above_chance_dep <- glmer(corrAns ~ 1 + (1|orig_gameID), family='binomial', data=final_data_dep)
-summary(above_chance_dep)
-```
-
-## Analyses for corrAns
+## Analyses for corrAns - note: we did not use this model after Reviewer 2's feedback about additional predictors
 ```{r}
 ## same analysis as in the original causaldraw_intervention
 # m_corrAns <- glmer(corrAns ~ condition + condition*numCausal + condition*numFunctional + condition*numSymbol + condition*numBackground + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
@@ -80,7 +51,7 @@ m_corrAns <- glmer(corrAns ~ condition + numCausal + numFunctional + numBackgrou
 summary(m_corrAns)
 ```
 
-## assessing model fit w/o predictors
+## assessing model fit w/o predictors (used in manuscript)
 ```{r}
 simple_m <- glmer(corrAns ~ condition + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0)
 summary(simple_m)
@@ -103,7 +74,7 @@ plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
           xmin = "depictive",
           xmax = "explanatory",
           tip_length = 0) +
-  # geom_text(aes(label = predicted), position=position_dodge(width=0.9), vjust=-0.25) +
+  geom_text(aes(label = predicted), position=position_dodge(width=0.9), vjust=-0.25) +
   xlab("condition") +
   ylab("corrAns") +
   scale_x_discrete(labels=c("depict", "explain")) +
@@ -117,7 +88,7 @@ plot_corrAns <- ggplot(df_corrAns, aes(x, predicted, fill=x)) +
 
 plot_corrAns + scale_fill_manual(values=c("#919191", "#00766e"))
 
-ggsave('../results/plots/intervention_2_corrAns_simple.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
+# ggsave('../results/plots/intervention_2_corrAns_simple.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ### raw plot for corrAns
@@ -149,15 +120,21 @@ m_rt <- lmer(log(rt) ~ condition + condition*numCausal + condition*numFunctional
 summary(m_rt) 
 ```
 
-### assess model fit w/o parameter estimates
+### assess model fit w/o parameter estimates (used in manuscript)
 ```{r}
-RT_simple <- lmer(log(rt) ~ condition + (1|sketchID) + (1|orig_gameID), data=final_data_RT_corrAns, REML=FALSE)
+RT_simple <- lmer(log(rt) ~ condition + (1|orig_gameID), data=final_data_RT_corrAns, REML=FALSE)
 summary(RT_simple) 
+```
+
+### assess w/ incorrect responses 
+```{r}
+RT_all_responses <- lmer(log(rt) ~ condition + (1|orig_gameID), data=final_data, REML=FALSE)
+summary(RT_all_responses) 
 ```
 
 ### plot for RT
 ```{r}
-df_rt <- ggpredict(m_rt, terms = "condition")
+df_rt <- ggpredict(RT_simple, terms = "condition")
 
 ## making plot
 plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
@@ -181,7 +158,7 @@ plot_rt <- ggplot(df_rt, aes(x, predicted, fill=x)) +
 
 plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
 
-ggsave('../results/plots/intervention_2_rt.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
+# ggsave('../results/plots/intervention_2_rt_simple.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ### raw plot for RT
@@ -203,3 +180,372 @@ plot_rt <- final_data_RT_corrAns %>%
 plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
 ```
 
+## follow-up analyses
+based on Reviewer 2's question about the degree to which participants are responding to the presented drawings, rather than merely using the photograph of the machine: Why might participants fail to identify the correct causal part? What semantic features might mediate performance?
+
+```{r}
+## first calculate mean corrAns for each sketchID, so that the scatterplots represent each sketch
+final_sketch <- final_data %>% 
+  select(sketchID, condition, corrAns, numBackground, numCausal, numFunctional, numSymbol, totalStrokes) %>% 
+  group_by(sketchID, condition) %>% 
+  summarise(across(everything(), mean)) %>% 
+  mutate(numBCK = ifelse(numBackground <= median(.$numBackground), "low", "high")) %>% 
+  mutate(numCSL = ifelse(numCausal <= median(.$numCausal), "low", "high")) %>% 
+  mutate(numFNC = ifelse(numFunctional <= median(.$numFunctional), "low", "high")) %>% 
+  mutate(numSYM = ifelse(numSymbol <= median(.$numSymbol), "low", "high")) %>% 
+  mutate(numTOTAL = ifelse(totalStrokes <= median(.$totalStrokes), "low", "high"))
+
+## recode data by median split
+final_data <- final_data %>% 
+  mutate(numBCK = ifelse(numBackground <= median(.$numBackground), 'low', 'high')) %>% 
+  mutate(numCSL = ifelse(numCausal <= median(.$numCausal), 'low', 'high')) %>% 
+  mutate(numFNC = ifelse(numFunctional <= median(.$numFunctional), 'low', 'high')) %>% 
+  mutate(numSYM = ifelse(numSymbol <= median(.$numSymbol), 'low', 'high')) %>% 
+  mutate(numTOTAL = ifelse(totalStrokes <= median(.$totalStrokes), 'low', 'high'))
+```
+
+### how does the number of STRUCTURAL details impact performance?
+```{r}
+final_sketch %>% 
+  ggplot(aes(x=numBackground, y=corrAns)) +
+  geom_point(aes(color = condition)) +
+  geom_smooth(method=lm, aes(color = factor(condition))) +
+  geom_smooth(method=lm) +
+  theme_light() 
+```
+
+```{r}
+## how does numBackground impact performance?
+structural <- glmer(corrAns ~ numBackground + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(structural)
+```
+
+```{r}
+## plot of raw data w/ median split
+final_data %>% 
+  ggplot(aes(x=numBCK, y=corrAns, fill=numBCK)) +
+  geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) +
+  facet_grid(.~condition) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numBackground') +
+  theme_light() 
+```
+
+```{r}
+## median split
+background_strokes <- glmer(corrAns ~ numBCK + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(background_strokes)
+```
+
+```{r}
+## is there an interaction between strokes + condition?
+background_condition <- glmer(corrAns ~ condition*numBCK + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(background_condition)
+```
+
+```{r}
+background_check <- glmer(corrAns ~ condition + numBCK + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+anova(background_check, background_condition)
+```
+
+```{r}
+## is there a significant effect of including numBCK independently, than when interacting with condititon?
+anova(background_strokes, background_condition)
+```
+
+
+```{r}
+## plot estimated means w/ 95% CIs
+background_m <- ggpredict(background_condition, terms = c("condition", "numBCK"))
+
+ggplot(background_m, aes(group, predicted, fill=group)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~x) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numBackground') +
+  theme_light() 
+```
+
+### how does the number of CAUSAL details impact performance?
+```{r}
+final_sketch %>% 
+  ggplot(aes(x=numCausal, y=corrAns)) +
+  geom_point(aes(color = condition)) +
+  geom_smooth(method=lm, aes(color = factor(condition))) +
+  geom_smooth(method=lm) +
+  theme_light() 
+```
+
+```{r}
+causal <- glmer(corrAns ~ numCausal + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(causal)
+```
+
+```{r}
+final_data %>% 
+  ggplot(aes(x=numCSL, y=corrAns, fill=numCSL)) +
+  geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) +
+  facet_grid(.~condition) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numCausal') +
+  theme_light() 
+```
+
+```{r}
+## median split
+causal_strokes <- glmer(corrAns ~ numCSL + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(causal_strokes)
+```
+
+```{r}
+## is there an interaction?
+causal_condition <- glmer(corrAns ~ condition*numCSL + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(causal_condition)
+```
+
+```{r}
+causal_check <- glmer(corrAns ~ condition + numCSL + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+anova(causal_check, causal_condition)
+```
+
+```{r}
+## is there a significant effect of including numCSL independently, than when interacting with condititon?
+anova(causal_strokes, causal_condition)
+```
+
+```{r}
+## plot estimated means w/ 95% CIs
+causal_m <- ggpredict(causal_condition, terms = c("condition", "numCSL"))
+
+ggplot(causal_m, aes(group, predicted, fill=group)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~x) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numCausal') +
+  theme_light() 
+```
+
+### how does the number of FUNCTIONAL details impact performance?
+```{r}
+final_sketch %>% 
+  ggplot(aes(x=numFunctional, y=corrAns)) +
+  geom_point(aes(color = condition)) +
+  geom_smooth(method=lm, aes(color = factor(condition))) +
+  geom_smooth(method=lm) +
+  theme_light() 
+```
+
+```{r}
+final_data %>% 
+  ggplot(aes(x=numFNC, y=corrAns, fill=numFNC)) +
+  geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) +
+  facet_grid(.~condition) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numFunctional') +
+  theme_light() 
+```
+
+```{r}
+functional <- glmer(corrAns ~ numFunctional + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(functional)
+```
+
+```{r}
+## median split
+functional_strokes <- glmer(corrAns ~ numFNC + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(functional_strokes)
+```
+
+```{r}
+## is there an interaction?
+functional_condition <- glmer(corrAns ~ condition*numFNC + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(functional_condition)
+```
+
+```{r}
+functional_check <- glmer(corrAns ~ condition + numFNC + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+anova(functional_check, functional_condition)
+```
+
+```{r}
+## is there a significant effect of including numFNC independently, than when interacting with condititon?
+anova(functional_strokes, functional_condition)
+```
+
+```{r}
+## plot estimated means w/ 95% CIs
+functional_m <- ggpredict(functional_condition, terms = c("condition", "numFNC"))
+
+ggplot(functional_m, aes(group, predicted, fill=group)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~x) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numFunctional') +
+  theme_light() 
+```
+
+### how does the number of SYMBOL details impact performance?
+```{r}
+final_sketch %>% 
+  ggplot(aes(x=numSymbol, y=corrAns)) +
+  geom_point(aes(color = condition)) +
+  geom_smooth(method=lm, aes(color = factor(condition))) +
+  geom_smooth(method=lm) +
+  theme_light() 
+```
+
+```{r}
+final_data %>% 
+  ggplot(aes(x=numSYM, y=corrAns, fill=numSYM)) +
+  geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) +
+  facet_grid(.~condition) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numSymbols') +
+  theme_light() 
+```
+
+```{r}
+symbol <- glmer(corrAns ~ numSymbol + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(symbol)
+```
+
+```{r}
+## median split
+symbol_strokes <- glmer(corrAns ~ numSYM + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(symbol_strokes)
+```
+
+```{r}
+## is there an interaction?
+symbol_condition <- glmer(corrAns ~ condition*numSYM + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(symbol_condition)
+```
+
+```{r}
+symbol_check <- glmer(corrAns ~ condition + numSYM + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+anova(symbol_check, symbol_condition)
+```
+
+```{r}
+## is there a significant effect of including numSYM independently, than when interacting with condititon?
+anova(symbol_strokes, symbol_condition)
+```
+
+```{r}
+## plot estimated means w/ 95% CIs
+symbol_m <- ggpredict(symbol_condition, terms = c("condition", "numSYM"))
+
+ggplot(symbol_m, aes(group, predicted, fill=group)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~x) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numSymbol') +
+  theme_light() 
+```
+
+### how does the number of OVERALL details impact performance?
+```{r}
+final_sketch %>% 
+  ggplot(aes(x=totalStrokes, y=corrAns)) +
+  geom_point(aes(color = condition)) +
+  geom_smooth(method=lm, aes(color = factor(condition))) +
+  geom_smooth(method=lm) +
+  theme_light() 
+```
+
+```{r}
+## median split
+final_data %>% 
+  ggplot(aes(x=numTOTAL, y=corrAns, fill=numTOTAL)) +
+  geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) +
+  facet_grid(.~condition) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numStrokes') + 
+  theme_light() 
+```
+
+```{r}
+overall_strokes <- glmer(corrAns ~ totalStrokes + (1|sketchID),  family="binomial", data=final_data, nAGQ=0)
+summary(overall_strokes)
+```
+
+```{r}
+## median split
+total_strokes <- glmer(corrAns ~ numTOTAL + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(total_strokes)
+```
+
+```{r}
+total_condition <- glmer(corrAns ~ condition*numTOTAL + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+summary(total_condition)
+```
+
+```{r}
+total_check <- glmer(corrAns ~ condition + numTOTAL + (1|sketchID), family="binomial", data=final_data, nAGQ=0)
+anova(total_check, total_condition)
+```
+
+```{r}
+## is there a significant effect of including numTOTAL independently, than when interacting with condititon?
+anova(total_strokes, total_condition)
+```
+
+```{r}
+## plot estimated means w/ 95% CIs
+total_m <- ggpredict(total_condition, terms = c("condition", "numTOTAL"))
+
+ggplot(total_m, aes(group, predicted, fill=group)) +
+  geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
+  facet_grid(.~x) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
+  scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
+  ggtitle('numTotal') +
+  theme_light() 
+```
+
+
+<!-- ## scrap code about mechanical elements -->
+<!-- ### how does the number of MECHANICAL (i.e., causal + functional) details impact performance? -->
+<!-- ```{r} -->
+<!-- final_data <- final_data %>%  -->
+<!--   mutate(numMechanical = numCausal + numFunctional) %>%  -->
+<!--   mutate(numMCH = ifelse(numMechanical <= median(.$numMechanical), 'low', 'high')) -->
+
+<!-- mechanical_conditions <- final_sketch %>%  -->
+<!--   ggplot(aes(x=numMechanical, y=corrAns)) + -->
+<!--   geom_point(aes(color = factor(condition))) + -->
+<!--   geom_smooth(method=lm, aes(color = factor(condition))) + -->
+<!--   geom_smooth(method=lm) + -->
+<!--   theme_light()  -->
+<!-- mechanical_conditions -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- mechanical_median <- final_sketch %>%  -->
+<!--   ggplot(aes(x=numMCH, y=corrAns, fill=numMCH)) + -->
+<!--   geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) + -->
+<!--   facet_grid(.~condition) + -->
+<!--   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) + -->
+<!--   ggtitle('numMechanical') + -->
+<!--   theme_light()  -->
+<!-- mechanical_median -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- mechanical <- glmer(corrAns ~ numMechanical + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0) -->
+<!-- summary(mechanical) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- mechanical_condition <- glmer(corrAns ~ condition*numMechanical + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0) -->
+<!-- summary(mechanical_condition) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- mechanical_strokes <- glmer(corrAns ~ numMCH + (1|sketchID), family="binomial", data=final_data, nAGQ=0) -->
+<!-- summary(mechanical_strokes) -->
+<!-- ``` -->

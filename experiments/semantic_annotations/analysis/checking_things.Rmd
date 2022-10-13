@@ -1,10 +1,6 @@
 ---
-title: "causaldraw_annotations analysis"
-output:
-  html_document:
-    df_print: paged
-  html_notebook: default
-  pdf_document: default
+title: "R Notebook"
+output: html_notebook
 ---
 
 This script was written to analyze the semantic annotations collected for *causaldraw* (visual production task)
@@ -32,7 +28,7 @@ require(wesanderson)
 ```{r message = FALSE}
 ## preprocessed data compiled across batches
 orig_data <- read_csv("../results/csv/causaldraw_annotation_final_stoke_analysis_random_sample.csv")
-orig_data <- subset(orig_data, select = -c(X1))
+orig_data <- subset(orig_data, select = -c(...1))
 
 ## original survey data with batch run on mturk
 orig_survey1 <- read_csv("../results/csv/causaldraw_annotations_processed_survey_data.csv")
@@ -51,6 +47,28 @@ orig_data$toy_id <- orig_data$stimuli
 final_data <- orig_data
 final_data <- final_data %>% 
   separate(toy_id, c("toy_type", "toy_variant"), "_", remove = FALSE)
+```
+
+#post-demographic analysis
+```{r}
+##count total participants
+length(unique(orig_survey$gameID.x))
+
+## count gender 
+count_gender <- orig_survey %>% 
+  filter(gender %in% c("F"))
+count_gender_ <- count_gender[!duplicated(count_gender$gameID.x),]
+table(count_gender_$gender)
+
+## calculate age
+calc_age <- orig_survey %>% 
+  filter(trial_type %in% c("survey-text"))
+calc_age <- calc_age[!duplicated(calc_age$gameID.x),]
+calc_age$DOB <- noquote(calc_age$DOB)
+calc_age$DOB <- as.numeric(calc_age$DOB)
+calc_age <- calc_age[!is.na(calc_age$DOB), ]
+calc_age$age <- calc_age$DOT - calc_age$DOB
+mean(calc_age$age)
 ```
 
 ## Visualize ALL drawn elements, broken down by toy_id
@@ -75,7 +93,7 @@ props.toys.plot <- props.toys %>%
   theme_light() +
   theme(plot.title = element_text(hjust = 0.5)) 
 
-ggsave('../results/plots/causaldraw_strokeType_bytoys_proportion.pdf', height = 18, width = 20, units = 'cm', useDingbats = F)
+# ggsave('../results/plots/causaldraw_strokeType_bytoys_proportion.pdf', height = 18, width = 20, units = 'cm', useDingbats = F)
 ```
 
 ## Collapse across toy_ids
@@ -97,7 +115,7 @@ props.plot <- props %>%
   theme(plot.title = element_text(hjust = 0.5)) +
   geom_text(size = 3, position = position_stack(vjust = 0.5))
 
-ggsave('../results/plots/causaldraw_strokeType_proportion.pdf', height = 18, width =8, units = 'cm', useDingbats = F)
+# ggsave('../results/plots/causaldraw_strokeType_proportion.pdf', height = 18, width =8, units = 'cm', useDingbats = F)
 ```
 
 #### diff colors, formatting for cogsci
@@ -129,7 +147,7 @@ props.plot <- props %>%
 props.plot + scale_fill_manual(values = c("#7F96AC", "#63948C", "#9FC8B7", "#F4D79F"))
 
 # ggsave('../results/plots/causaldraw_strokeType_proportion.pdf', height = 9, width = 5,  units = 'cm', useDingbats = F)
-ggsave('../results/plots/causaldraw_strokeType_proportion.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
+# ggsave('../results/plots/causaldraw_strokeType_proportion.pdf', height = 8, width = 3,  units = 'cm', useDingbats = F)
 ```
 
 ## Visualize ALL drawn elements, broken down by toy_id
@@ -160,7 +178,7 @@ props.toys.plot <- props.toys %>%
   theme(plot.title = element_text(hjust = 0.5)) 
 
 props.toys.plot + scale_fill_manual(values = c("#7F96AC", "#63948C", "#9FC8B7", "#F4D79F"))
-ggsave('../results/plots/causaldraw_strokeType_bytoys_proportion.pdf', height = 18, width = 20, units = 'cm', useDingbats = F)
+# ggsave('../results/plots/causaldraw_strokeType_bytoys_proportion.pdf', height = 18, width = 20, units = 'cm', useDingbats = F)
 ```
 
 ```{r}
@@ -206,7 +224,7 @@ entity.props.toys.plot <- entity.props.toys %>%
 
 entity.props.toys.plot + scale_fill_manual(values=wes_palette(n=4, name="Royal1"))
 
-ggsave('../results/plots/causaldraw_strokeType_entitytoys_proportion.pdf', height = 18, width = 20,  units = 'cm', useDingbats = F)
+# ggsave('../results/plots/causaldraw_strokeType_entitytoys_proportion.pdf', height = 18, width = 20,  units = 'cm', useDingbats = F)
 ```
 
 ## collape across toy_id
@@ -229,7 +247,7 @@ entity.props.plot <- entity.props %>%
 
 entity.props.plot + scale_fill_manual(values=wes_palette(n=4, name="Royal1"))
 
-ggsave('../results/plots/causaldraw_strokeType_entity_proportion.pdf', height = 18, width = 8,  units = 'cm', useDingbats = F)
+# ggsave('../results/plots/causaldraw_strokeType_entity_proportion.pdf', height = 18, width = 8,  units = 'cm', useDingbats = F)
 ```
 
 ## simple chi-squared test for independence btw condition & causal relevance (pooling all strokes)
@@ -373,7 +391,7 @@ props.plot_RT <- props_rt %>%
 
 props.plot_RT + scale_fill_manual(values=wes_palette(n=4, name="Royal1"))
 
-ggsave('../results/plots/causaldraw_strokeType_drawingTime_proportion.pdf', height = 18, width = 8,  units = 'cm', useDingbats = F)
+# ggsave('../results/plots/causaldraw_strokeType_drawingTime_proportion.pdf', height = 18, width = 8,  units = 'cm', useDingbats = F)
 ```
 
 ```{r}
