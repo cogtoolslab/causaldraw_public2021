@@ -490,6 +490,32 @@ final_sketch %>%
 ```
 
 ```{r}
+## SANDBOX: DO NOT KEEP OR COMMIT
+final_sketch %>% 
+  filter(totalStrokes < (mean(.$totalStrokes) + 3*sd(.$totalStrokes))) %>% 
+  ggplot(aes(x=totalStrokes, y=corrAns)) +
+  geom_point(aes(color = condition)) +
+  geom_smooth(method=lm, aes(color = factor(condition))) +
+  geom_smooth(method=lm) +
+  theme_light() 
+
+```
+
+```{r}
+## also sandbox
+final_data_filtered <- final_data %>% 
+  filter(totalStrokes < (mean(.$totalStrokes) + 3*sd(.$totalStrokes))) 
+
+overall_strokes <- glmer(corrAns ~ totalStrokes + (1|sketchID),  family="binomial", data = final_data_filtered, nAGQ=0)
+summary(overall_strokes)
+
+overall_strokes_by_condition <- glmer(corrAns ~ totalStrokes*condition + (1|sketchID),  family="binomial", data = final_data_filtered, nAGQ=0)
+# summary(overall_strokes_by_condition)
+# anova(overall_strokes, overall_strokes_by_condition)
+```
+
+
+```{r}
 ## median split
 final_data %>% 
   ggplot(aes(x=numTOTAL, y=corrAns, fill=numTOTAL)) +
