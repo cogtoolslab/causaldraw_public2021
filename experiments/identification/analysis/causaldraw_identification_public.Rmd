@@ -95,10 +95,6 @@ plot_rt + scale_fill_manual(values=c("#919191", "#00766e"))
 # ggsave('../results/plots/identification_rt_simple.pdf', height = 8, width = 3.25,  units = 'cm', useDingbats = F)
 ```
 
-```{r}
-df_rt
-```
-
 ##Analyses for corrAns
 ```{r}
 ## full model for corrAns
@@ -174,8 +170,7 @@ above_chance_dep <- glmer(corrAns ~ 1 + (1|orig_gameID), family='binomial', data
 summary(above_chance_dep)
 ```
 
-## follow-up analyses
-based on Reviewer 2's question about the degree to which participants are responding to the presented drawings, rather than merely using the photograph of the machine: Why might participants fail to identify the correct causal part? What semantic features might mediate performance?
+## follow-up exploratory analyses
 
 ```{r}
 ## first calculate mean corrAns for each sketchID, so that the scatterplots represent each sketch
@@ -246,7 +241,6 @@ anova(background_check, background_condition)
 ## is there a significant effect of including numBCK independently, than when interacting with condititon?
 anova(background_strokes, background_condition)
 ```
-
 
 ```{r}
 ## plot estimated means w/ 95% CIs
@@ -500,46 +494,3 @@ ggplot(total_m, aes(group, predicted, fill=group)) +
   ggtitle('numTotal') +
   theme_light() 
 ```
-
-
-<!-- ## scrap code about mechanical elements -->
-<!-- ### how does the number of MECHANICAL (i.e., causal + functional) details impact performance? -->
-<!-- ```{r} -->
-<!-- final_data <- final_data %>%  -->
-<!--   mutate(numMechanical = numCausal + numFunctional) %>%  -->
-<!--   mutate(numMCH = ifelse(numMechanical <= median(.$numMechanical), 'low', 'high')) -->
-
-<!-- mechanical_conditions <- final_sketch %>%  -->
-<!--   ggplot(aes(x=numMechanical, y=corrAns)) + -->
-<!--   geom_point(aes(color = factor(condition))) + -->
-<!--   geom_smooth(method=lm, aes(color = factor(condition))) + -->
-<!--   geom_smooth(method=lm) + -->
-<!--   theme_light()  -->
-<!-- mechanical_conditions -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical_median <- final_sketch %>%  -->
-<!--   ggplot(aes(x=numMCH, y=corrAns, fill=numMCH)) + -->
-<!--   geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) + -->
-<!--   facet_grid(.~condition) + -->
-<!--   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) + -->
-<!--   ggtitle('numMechanical') + -->
-<!--   theme_light()  -->
-<!-- mechanical_median -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical <- glmer(corrAns ~ numMechanical + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0) -->
-<!-- summary(mechanical) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical_condition <- glmer(corrAns ~ condition*numMechanical + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0) -->
-<!-- summary(mechanical_condition) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical_strokes <- glmer(corrAns ~ numMCH + (1|sketchID), family="binomial", data=final_data, nAGQ=0) -->
-<!-- summary(mechanical_strokes) -->
-<!-- ``` -->

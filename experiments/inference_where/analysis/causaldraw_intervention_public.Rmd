@@ -22,6 +22,7 @@ library(dplyr)
 # library(plyr)
 # detach(package:plyr)
 library(ggplot2)
+library(gridExtra)
 library(stringr)
 require(tidyboot)
 library(emmeans)
@@ -213,14 +214,12 @@ plot_sketchType <- sketchType %>%
 # ggsave('../results/plots/sketchType.pdf', height = 8, width = 6,  units = 'cm', useDingbats = F)
 ```
 
-## follow-up analyses
-based on Reviewer 2's question about the degree to which participants are responding to the presented drawings, rather than merely using the photograph of the machine: Why might participants fail to identify the correct causal part? What semantic features might mediate performance?
-
+## follow-up exploratory analyses
 ```{r}
 ## first calculate mean corrAns for each sketchID, so that the scatterplots represent each sketch
 final_sketch <- final_data %>% 
-  select(sketchID, condition, corrAns, numBackground, numCausal, numFunctional, numSymbol, totalStrokes) %>% 
-  group_by(sketchID, condition) %>% 
+  select(sketchID, condition, corrAns, numBackground, numCausal, numFunctional, numSymbol, totalStrokes, toy_id) %>% 
+  group_by(sketchID, condition, toy_id) %>% 
   summarise(across(everything(), mean)) %>% 
   mutate(numBCK = ifelse(numBackground <= median(.$numBackground), "low", "high")) %>% 
   mutate(numCSL = ifelse(numCausal <= median(.$numCausal), "low", "high")) %>% 
@@ -239,12 +238,13 @@ final_data <- final_data %>%
 
 ### how does the number of STRUCTURAL details impact performance?
 ```{r}
-final_sketch %>% 
+structural_plot <- final_sketch %>% 
   ggplot(aes(x=numBackground, y=corrAns)) +
   geom_point(aes(color = condition)) +
   geom_smooth(method=lm, aes(color = factor(condition))) +
   geom_smooth(method=lm) +
   theme_light() 
+structural_plot
 ```
 
 ```{r}
@@ -286,28 +286,29 @@ anova(background_check, background_condition)
 anova(background_strokes, background_condition)
 ```
 
-
 ```{r}
 ## plot estimated means w/ 95% CIs
 background_m <- ggpredict(background_condition, terms = c("condition", "numBCK"))
 
-ggplot(background_m, aes(group, predicted, fill=group)) +
+structural_median_plot <- ggplot(background_m, aes(group, predicted, fill=group)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   facet_grid(.~x) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
   ggtitle('numBackground') +
   theme_light() 
+structural_median_plot
 ```
 
 ### how does the number of CAUSAL details impact performance?
 ```{r}
-final_sketch %>% 
+causal_plot <- final_sketch %>% 
   ggplot(aes(x=numCausal, y=corrAns)) +
   geom_point(aes(color = condition)) +
   geom_smooth(method=lm, aes(color = factor(condition))) +
   geom_smooth(method=lm) +
   theme_light() 
+causal_plot
 ```
 
 ```{r}
@@ -351,23 +352,25 @@ anova(causal_strokes, causal_condition)
 ## plot estimated means w/ 95% CIs
 causal_m <- ggpredict(causal_condition, terms = c("condition", "numCSL"))
 
-ggplot(causal_m, aes(group, predicted, fill=group)) +
+causal_median_plot <- ggplot(causal_m, aes(group, predicted, fill=group)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   facet_grid(.~x) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
   ggtitle('numCausal') +
-  theme_light() 
+  theme_light()
+causal_median_plot
 ```
 
 ### how does the number of FUNCTIONAL details impact performance?
 ```{r}
-final_sketch %>% 
+functional_plot <- final_sketch %>% 
   ggplot(aes(x=numFunctional, y=corrAns)) +
   geom_point(aes(color = condition)) +
   geom_smooth(method=lm, aes(color = factor(condition))) +
   geom_smooth(method=lm) +
   theme_light() 
+functional_plot
 ```
 
 ```{r}
@@ -411,23 +414,25 @@ anova(functional_strokes, functional_condition)
 ## plot estimated means w/ 95% CIs
 functional_m <- ggpredict(functional_condition, terms = c("condition", "numFNC"))
 
-ggplot(functional_m, aes(group, predicted, fill=group)) +
+functional_median_plot <- ggplot(functional_m, aes(group, predicted, fill=group)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   facet_grid(.~x) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
   ggtitle('numFunctional') +
   theme_light() 
+functional_median_plot
 ```
 
 ### how does the number of SYMBOL details impact performance?
 ```{r}
-final_sketch %>% 
+symbol_plot <- final_sketch %>% 
   ggplot(aes(x=numSymbol, y=corrAns)) +
   geom_point(aes(color = condition)) +
   geom_smooth(method=lm, aes(color = factor(condition))) +
   geom_smooth(method=lm) +
-  theme_light() 
+  theme_light()
+symbol_plot
 ```
 
 ```{r}
@@ -471,50 +476,31 @@ anova(symbol_strokes, symbol_condition)
 ## plot estimated means w/ 95% CIs
 symbol_m <- ggpredict(symbol_condition, terms = c("condition", "numSYM"))
 
-ggplot(symbol_m, aes(group, predicted, fill=group)) +
+symbol_median_plot <- ggplot(symbol_m, aes(group, predicted, fill=group)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   facet_grid(.~x) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
   ggtitle('numSymbol') +
   theme_light() 
+symbol_median_plot
 ```
 
 ### how does the number of OVERALL details impact performance?
 ```{r}
-final_sketch %>% 
+totalStrokes_plot <- final_sketch %>% 
   ggplot(aes(x=totalStrokes, y=corrAns)) +
+  facet_grid(.~toy_id) +
   geom_point(aes(color = condition)) +
   geom_smooth(method=lm, aes(color = factor(condition))) +
   geom_smooth(method=lm) +
   theme_light() 
+totalStrokes_plot
 ```
 
 ```{r}
-## SANDBOX: DO NOT KEEP OR COMMIT
-final_sketch %>% 
-  filter(totalStrokes < (mean(.$totalStrokes) + 3*sd(.$totalStrokes))) %>% 
-  ggplot(aes(x=totalStrokes, y=corrAns)) +
-  geom_point(aes(color = condition)) +
-  geom_smooth(method=lm, aes(color = factor(condition))) +
-  geom_smooth(method=lm) +
-  theme_light() 
-
+glmer(corrAns ~ numTOTAL + (1|sketchID),  family="binomial", data = final_data, nAGQ=0) %>% summary()
 ```
-
-```{r}
-## also sandbox
-final_data_filtered <- final_data %>% 
-  filter(totalStrokes < (mean(.$totalStrokes) + 3*sd(.$totalStrokes))) 
-
-overall_strokes <- glmer(corrAns ~ totalStrokes + (1|sketchID),  family="binomial", data = final_data_filtered, nAGQ=0)
-summary(overall_strokes)
-
-overall_strokes_by_condition <- glmer(corrAns ~ totalStrokes*condition + (1|sketchID),  family="binomial", data = final_data_filtered, nAGQ=0)
-# summary(overall_strokes_by_condition)
-# anova(overall_strokes, overall_strokes_by_condition)
-```
-
 
 ```{r}
 ## median split
@@ -557,54 +543,12 @@ anova(total_strokes, total_condition)
 ## plot estimated means w/ 95% CIs
 total_m <- ggpredict(total_condition, terms = c("condition", "numTOTAL"))
 
-ggplot(total_m, aes(group, predicted, fill=group)) +
+totalStrokes_median_plot <- ggplot(total_m, aes(group, predicted, fill=group)) +
   geom_bar(aes(y=predicted), stat="summary", width = .75, position = position_dodge(width = 0.5)) +
   facet_grid(.~x) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), alpha = .8, size = .75, width=0) +
   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) +
   ggtitle('numTotal') +
   theme_light() 
+totalStrokes_median_plot
 ```
-
-
-<!-- ## scrap code about mechanical elements -->
-<!-- ### how does the number of MECHANICAL (i.e., causal + functional) details impact performance? -->
-<!-- ```{r} -->
-<!-- final_data <- final_data %>%  -->
-<!--   mutate(numMechanical = numCausal + numFunctional) %>%  -->
-<!--   mutate(numMCH = ifelse(numMechanical <= median(.$numMechanical), 'low', 'high')) -->
-
-<!-- mechanical_conditions <- final_sketch %>%  -->
-<!--   ggplot(aes(x=numMechanical, y=corrAns)) + -->
-<!--   geom_point(aes(color = factor(condition))) + -->
-<!--   geom_smooth(method=lm, aes(color = factor(condition))) + -->
-<!--   geom_smooth(method=lm) + -->
-<!--   theme_light()  -->
-<!-- mechanical_conditions -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical_median <- final_sketch %>%  -->
-<!--   ggplot(aes(x=numMCH, y=corrAns, fill=numMCH)) + -->
-<!--   geom_bar(stat="summary", width = .7, position = position_dodge(width = .75)) + -->
-<!--   facet_grid(.~condition) + -->
-<!--   scale_fill_manual("legend", values = c("high" = "orange", "low" = "blue")) + -->
-<!--   ggtitle('numMechanical') + -->
-<!--   theme_light()  -->
-<!-- mechanical_median -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical <- glmer(corrAns ~ numMechanical + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0) -->
-<!-- summary(mechanical) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical_condition <- glmer(corrAns ~ condition*numMechanical + (1|sketchID) + (1|orig_gameID), family="binomial", data=final_data, nAGQ=0) -->
-<!-- summary(mechanical_condition) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- mechanical_strokes <- glmer(corrAns ~ numMCH + (1|sketchID), family="binomial", data=final_data, nAGQ=0) -->
-<!-- summary(mechanical_strokes) -->
-<!-- ``` -->
